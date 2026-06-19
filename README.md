@@ -10,6 +10,7 @@ This repo contains a ready-to-import n8n workflow for a live launch-tracking dem
 
 - [Download the n8n workflow JSON](https://raw.githubusercontent.com/gmossy/n8n-meetup/main/launch_tracker_workflow.json)
 - [Download this repo as a ZIP](https://github.com/gmossy/n8n-meetup/archive/refs/heads/main.zip)
+- [Open the GitHub Pages landing page](https://gmossy.github.io/n8n-meetup/)
 - [Open the GitHub repo](https://github.com/gmossy/n8n-meetup)
 
 To import the workflow: download `launch_tracker_workflow.json`, then in n8n go to **Workflows -> Import from File**.
