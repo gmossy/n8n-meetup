@@ -97,6 +97,8 @@ cp .env.example .env
 
 ```bash
 OPENAI_API_KEY=your_new_key_here
+CALLMEBOT_PHONE=+15551234567
+CALLMEBOT_APIKEY=your_callmebot_key_here
 ```
 
 3. Start n8n with Docker:
@@ -148,6 +150,28 @@ http://localhost:5678/webhook/launch-board?format=json
 
 To stop n8n, press `Ctrl+C` in the Docker terminal. Your workflow data stays in the Docker volume named `n8n_launch_board_data`.
 
+## WhatsApp delivery
+
+The WhatsApp alert is sent by the **Send WhatsApp** node through CallMeBot:
+
+```text
+https://api.callmebot.com/whatsapp.php
+```
+
+It sends to the phone number in your n8n environment variable:
+
+```bash
+CALLMEBOT_PHONE=+15551234567
+```
+
+The CallMeBot API key is read from:
+
+```bash
+CALLMEBOT_APIKEY=your_callmebot_key_here
+```
+
+For your own local `.env`, use the phone number that CallMeBot activated for you and the API key CallMeBot gave you. Do not commit `.env`; it is ignored by `.gitignore`.
+
 ## Setup
 
 1. Download `launch_tracker_workflow.json`.
@@ -155,8 +179,6 @@ To stop n8n, press `Ctrl+C` in the Docker terminal. Your workflow data stays in 
 3. Set `OPENAI_API_KEY` in your n8n environment.
 4. Open the **Config** node and update optional settings:
    - `callmebot.enabled`
-   - `callmebot.phone`
-   - `callmebot.apikey`
    - `discord.enabled`
    - `discord.webhookUrl`
 5. Activate the workflow.

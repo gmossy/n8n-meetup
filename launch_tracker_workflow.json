@@ -23,7 +23,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Demo configuration. Move secrets to env/credentials for production.\nreturn [{ json: {\n  openai:   { model: 'gpt-4o-mini' },\n  launchApi:{ base: 'https://ll.thespacedevs.com/2.2.0' },\n  callmebot:{ enabled: true,  phone: '+10000000000', apikey: 'YOUR_CALLMEBOT_APIKEY' },\n  discord:  { enabled: false, webhookUrl: 'https://discord.com/api/webhooks/XXX/YYY' },\n  forceMode:'auto',        // 'auto' | 'preview' | 'recap'  (force a branch for demos)\n  recapWindowHours: 24\n}}];"
+        "jsCode": "// Demo configuration. Keep secrets in environment variables or n8n credentials.\nreturn [{ json: {\n  openai:   { model: 'gpt-4o-mini' },\n  launchApi:{ base: 'https://ll.thespacedevs.com/2.2.0' },\n  callmebot:{ enabled: true },\n  discord:  { enabled: false, webhookUrl: 'https://discord.com/api/webhooks/XXX/YYY' },\n  forceMode:'auto',        // 'auto' | 'preview' | 'recap'  (force a branch for demos)\n  recapWindowHours: 24\n}}];"
       },
       "id": "cfg",
       "name": "Config",
@@ -259,7 +259,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://api.callmebot.com/whatsapp.php?phone={{ encodeURIComponent($json.whatsapp.phone) }}&text={{ encodeURIComponent($json.message) }}&apikey={{ $json.whatsapp.apikey }}",
+        "url": "=https://api.callmebot.com/whatsapp.php?phone={{ encodeURIComponent($env.CALLMEBOT_PHONE) }}&text={{ encodeURIComponent($json.message) }}&apikey={{ $env.CALLMEBOT_APIKEY }}",
         "options": {}
       },
       "id": "sendWa",
@@ -274,7 +274,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const sd = $getWorkflowStaticData('global');\nif(!Array.isArray(sd.notifications)) sd.notifications = [];\nconst bn = $('Build Notification').first().json;\nsd.notifications.unshift({\n  channel: 'WhatsApp',\n  target: bn.whatsapp.phone,\n  title: bn.launchName,\n  status: 'dispatched',\n  at: new Date().toISOString()\n});\nsd.notifications = sd.notifications.slice(0, 25);\nreturn [{ json: { logged: true } }];"
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nif(!Array.isArray(sd.notifications)) sd.notifications = [];\nconst bn = $('Build Notification').first().json;\nsd.notifications.unshift({\n  channel: 'WhatsApp',\n  target: 'env:CALLMEBOT_PHONE',\n  title: bn.launchName,\n  status: 'dispatched',\n  at: new Date().toISOString()\n});\nsd.notifications = sd.notifications.slice(0, 25);\nreturn [{ json: { logged: true } }];"
       },
       "id": "logWa",
       "name": "Log WhatsApp",
