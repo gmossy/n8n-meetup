@@ -28,6 +28,25 @@ This demo uses n8n as both:
 
 That is the useful idea for the meetup: n8n can orchestrate real backend work and expose a simple live app without needing a separate server.
 
+## Hosting options: local Docker or cloud VPS
+
+This project is currently demoed from Glenn's Hostinger account on a VPS at:
+
+```text
+https://n8n.srv1189229.hstgr.cloud/webhook/launch-board
+```
+
+[Hostinger](https://www.hostinger.com/) is a web hosting provider. In this project, Hostinger is used as the cloud host for n8n, so the workflow can keep running even when a local laptop is closed.
+
+The hosting term is **VPS**, short for **Virtual Private Server**. A VPS is a virtual server rented from a hosting provider. It runs on a larger physical machine, but your VPS gets its own allocated CPU, memory, storage, operating system, and server configuration. For developers, it feels like a small Linux server in the cloud: you can SSH into it, install Docker, run n8n, attach a domain, and keep workflows online 24/7.
+
+For this repo, you have two good ways to run the demo:
+
+- **Local Docker:** best for meetup attendees, learning, hacking, and safe experimentation. Run n8n on your own computer with Docker, import the workflow, and open `http://localhost:5678/webhook/launch-board`.
+- **Cloud VPS:** best for a public or always-on demo. Run n8n on a VPS provider such as Hostinger, keep secrets in the server environment, activate the workflow, and share the production webhook URL.
+
+The workflow file is the same in both cases. The difference is where n8n runs: on your laptop for local development, or on a cloud VPS for a persistent public instance.
+
 ## What the workflow does
 
 The workflow has two paths:
