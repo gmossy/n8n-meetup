@@ -77,6 +77,77 @@ environment:
 
 For n8n Cloud or other hosted setups, use n8n credentials or variables and update the OpenAI HTTP Request header to reference the secret from that store.
 
+## Quickstart with your own n8n Docker
+
+Developers at the meetup should run their own local n8n instance. The Launch Board website is served by n8n, so you do not need a separate web server for the demo.
+
+Prerequisites:
+
+- Docker Desktop
+- an OpenAI API key
+- this repo ZIP or a cloned copy of the repo
+
+1. Copy the environment example:
+
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` and put in your own OpenAI key:
+
+```bash
+OPENAI_API_KEY=your_new_key_here
+```
+
+3. Start n8n with Docker:
+
+```bash
+docker run --rm -it \
+  --name n8n-launch-board \
+  -p 5678:5678 \
+  --env-file .env \
+  -v n8n_launch_board_data:/home/node/.n8n \
+  docker.n8n.io/n8nio/n8n
+```
+
+4. Open n8n:
+
+```text
+http://localhost:5678
+```
+
+5. Create the local n8n owner account if this is your first run.
+
+6. Import the workflow:
+
+```text
+Workflows -> Import from File -> launch_tracker_workflow.json
+```
+
+7. Open the imported workflow and activate it.
+
+8. Populate the Launch Board:
+
+```text
+Bottom Execute workflow dropdown -> from Schedule Trigger -> Execute workflow
+```
+
+Use **from Schedule Trigger** when you want to fetch launch data. Use **from Webhook (Launch Board)** only when testing the website trigger.
+
+9. Open the local website:
+
+```text
+http://localhost:5678/webhook/launch-board
+```
+
+10. Optional: inspect the JSON powering the page:
+
+```text
+http://localhost:5678/webhook/launch-board?format=json
+```
+
+To stop n8n, press `Ctrl+C` in the Docker terminal. Your workflow data stays in the Docker volume named `n8n_launch_board_data`.
+
 ## Setup
 
 1. Download `launch_tracker_workflow.json`.
