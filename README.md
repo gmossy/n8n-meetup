@@ -30,13 +30,13 @@ That is the useful idea for the meetup: n8n can orchestrate real backend work an
 
 ## Hosting options: local Docker or cloud VPS
 
-This project is currently demoed from Glenn's Hostinger account on a VPS at:
+This project is currently demoed from Glenn's Hostinger account. The Hostinger **VPS** hosts the n8n instance, and n8n serves the Launch Board from this webhook URL:
 
 ```text
 https://n8n.srv1189229.hstgr.cloud/webhook/launch-board
 ```
 
-[Hostinger](https://www.hostinger.com/) is a web hosting provider. In this project, Hostinger is used as the cloud host for n8n, so the workflow can keep running even when a local laptop is closed.
+[Hostinger](https://www.hostinger.com/) is a web hosting provider. In this project, Hostinger provides the cloud server, the VPS runs n8n, and n8n runs the workflow plus the public webhook. That setup keeps the Launch Board online even when a local laptop is closed.
 
 The hosting term is **VPS**, short for **Virtual Private Server**. A VPS is a virtual server rented from a hosting provider. It runs on a larger physical machine, but your VPS gets its own allocated CPU, memory, storage, operating system, and server configuration. For developers, it feels like a small Linux server in the cloud: you can SSH into it, install Docker, run n8n, attach a domain, and keep workflows online 24/7.
 
