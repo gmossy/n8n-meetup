@@ -37,6 +37,59 @@ The workflow has two paths:
 
 The Launch Board includes a selectable **Previous Launches** list. The workflow refreshes automatically once per day when active. Run the workflow once from **Schedule Trigger** to populate the list immediately.
 
+## How the launch data API works
+
+The workflow uses [TheSpaceDevs Launch Library 2](https://thespacedevs.com/llapi), a public spaceflight data API. TheSpaceDevs describes Launch Library 2 as a database of rocket launches, space events, crewed spaceflight, agencies, pads, vehicles, and related mission data. The public tier is free for light use and is rate limited, so this demo only refreshes once per day by default.
+
+The workflow calls two unauthenticated HTTP endpoints:
+
+```text
+https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=1&mode=detailed&hide_recent_previous=true
+https://ll.thespacedevs.com/2.2.0/launch/previous/?limit=10&mode=detailed
+```
+
+The first request fetches the next upcoming launch. The second request fetches the latest previous launches for the selectable history list. `mode=detailed` asks the API for richer launch objects, including provider, rocket, mission, pad, location, image, status, webcast, and launch time fields.
+
+No API key is needed for TheSpaceDevs in this demo. The paid/Patreon path is only needed if you want higher request rates. For meetup use, the once-per-day schedule plus occasional manual test runs should stay comfortably small.
+
+## Workflow map
+
+```mermaid
+flowchart TD
+    A["Schedule Trigger<br/>once per day"] --> B["Config<br/>API base, model, demo settings"]
+    B --> C["Get Upcoming Launch<br/>Launch Library 2"]
+    B --> D["Get Previous Launches<br/>latest 10"]
+    C --> E["Select Headline"]
+    D --> E
+    E --> F{"Recent previous launch<br/>within recap window?"}
+    F -->|yes| G["AI Recap<br/>OpenAI"]
+    F -->|no| H["AI Preview<br/>OpenAI"]
+    G --> I["Build Notification<br/>save latest board state"]
+    H --> I
+    I --> J{"WhatsApp enabled?"}
+    J -->|yes| K["Send WhatsApp<br/>CallMeBot"]
+    J -->|no| L["Skip WhatsApp"]
+    I --> M{"Discord enabled?"}
+    M -->|yes| N["Send Discord<br/>webhook"]
+    M -->|no| O["Skip Discord"]
+
+    P["GET /webhook/launch-board"] --> Q["Load saved state"]
+    Q --> R{"format=json?"}
+    R -->|yes| S["Respond JSON<br/>for standalone pages"]
+    R -->|no| T["Render HTML<br/>Launch Board website"]
+```
+
+## Workflow brief
+
+The scheduled side of the workflow is the data refresh. It wakes up once per day, calls Launch Library 2 for the next launch and the latest previous launches, normalizes the API response into a smaller shape, and chooses the board mode:
+
+- **Preview mode:** show the next upcoming mission.
+- **Recap mode:** if the latest previous launch happened within the configured recap window, show that launch instead.
+
+After choosing the launch, the workflow sends a compact mission prompt to OpenAI. OpenAI returns a short engineer-friendly preview or recap. The workflow stores that briefing, the selected launch, the previous-launch list, and recent notification history in n8n workflow static data.
+
+The webhook side is the website. When someone opens `/webhook/launch-board`, n8n loads the saved static data and returns the Launch Board HTML. When the page asks for `/webhook/launch-board?format=json`, n8n returns the same state as JSON with CORS enabled, so the board can also be hosted separately on GitHub Pages if desired.
+
 ## Protect your OpenAI key
 
 If you have ever pasted an OpenAI key into chat, a screenshot, a workflow JSON file, or a public page, treat it as exposed and rotate it.
