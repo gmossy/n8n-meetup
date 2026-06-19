@@ -35,7 +35,7 @@ The workflow has two paths:
 - **Schedule path:** fetches upcoming and previous launches from TheSpaceDevs, decides whether the board should show a preview or recap, calls OpenAI for a short mission briefing, saves the latest state, and optionally fans out alerts to WhatsApp and Discord.
 - **Webhook path:** serves the Launch Board website at `/webhook/launch-board`. The same URL with `?format=json` returns the board data as JSON.
 
-The Launch Board includes a selectable **Previous Launches** list. Run the workflow once from **Schedule Trigger** to populate that list.
+The Launch Board includes a selectable **Previous Launches** list. The workflow refreshes automatically once per day when active. Run the workflow once from **Schedule Trigger** to populate the list immediately.
 
 ## Protect your OpenAI key
 
@@ -135,7 +135,7 @@ Workflows -> Import from File -> launch_tracker_workflow.json
 Bottom Execute workflow dropdown -> from Schedule Trigger -> Execute workflow
 ```
 
-Use **from Schedule Trigger** when you want to fetch launch data. Use **from Webhook (Launch Board)** only when testing the website trigger.
+Use **from Schedule Trigger** when you want to fetch launch data immediately. Use **from Webhook (Launch Board)** only when testing the website trigger.
 
 9. Open the local website:
 
@@ -207,7 +207,7 @@ https://<your-n8n-host>/webhook/launch-board?format=json
 ## Demo tips
 
 - For a live demo, show the n8n canvas on one screen and the Launch Board on another.
-- Run **from Schedule Trigger**, not **from Webhook (Launch Board)**, when you want to refresh launch data.
+- The active workflow refreshes automatically once per day. Run **from Schedule Trigger**, not **from Webhook (Launch Board)**, when you want to refresh launch data manually.
 - Use `forceMode: 'recap'` in the Config node if you want to force the recap branch on stage.
 - TheSpaceDevs free API is rate limited, so avoid rapid repeated runs.
 
