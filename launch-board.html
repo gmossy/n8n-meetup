@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mission Launch Board</title>
+<style>
+  :root{
+    --nasa-blue:#0B3D91;      /* official NASA blue */
+    --nasa-red:#FC3D21;       /* official NASA red */
+    --n8n:#EA4B71;            /* n8n accent */
+    --void:#04060f;           /* deep space */
+    --panel:#0a1024;          /* telemetry panel */
+    --panel-2:#0f1733;
+    --line:#1d2a52;           /* hairline */
+    --ink:#eef3ff;            /* primary text */
+    --muted:#8aa0c8;          /* secondary text */
+    --go:#19d27c;
+    --discord:#5865F2;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--void);
+    color:var(--ink);
+    font-family:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  #stars{position:fixed;inset:0;z-index:0;display:block}
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 20px 60px}
+
+  /* ---- header ---- */
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding-bottom:16px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:12px}
+  .meatball{width:30px;height:30px;border-radius:50%;
+    background:radial-gradient(circle at 32% 30%, #2a5fd6, var(--nasa-blue) 60%);
+    box-shadow:0 0 0 2px #06122e, 0 0 18px rgba(43,95,214,.5)}
+  .title{font-weight:800;letter-spacing:.22em;font-size:13px}
+  .title b{color:var(--nasa-red)}
+  .poweredby{display:flex;align-items:center;gap:8px;border:1px solid var(--line);
+    border-radius:999px;padding:6px 12px;background:rgba(234,75,113,.06);
+    font-size:11px;letter-spacing:.14em;color:var(--muted)}
+  .poweredby .dot{width:8px;height:8px;border-radius:50%;background:var(--n8n);
+    box-shadow:0 0 10px var(--n8n)}
+  .poweredby strong{color:var(--n8n);letter-spacing:.08em}
+
+  /* ---- status strip ---- */
+  .strip{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:16px 0 22px;
+    font-size:11px;letter-spacing:.12em;color:var(--muted)}
+  .chip{border:1px solid var(--line);border-radius:6px;padding:5px 10px;
+    text-transform:uppercase}
+  .chip.mode{color:#dbe6ff;border-color:#2c3f76;background:rgba(11,61,145,.25)}
+  .chip.status{color:#04130b}
+  .live{display:inline-flex;align-items:center;gap:7px;margin-left:auto;color:var(--go)}
+  .live i{width:8px;height:8px;border-radius:50%;background:var(--go);
+    box-shadow:0 0 10px var(--go);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+  /* ---- hero ---- */
+  .hero{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .media{height:200px;background-size:cover;background-position:center;
+    position:relative;border-bottom:1px solid var(--line);
+    background-color:#0a1430}
+  .media:after{content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(4,6,15,0) 35%,rgba(4,6,15,.85))}
+  .pad{position:absolute;left:14px;bottom:12px;z-index:2;font-size:11px;
+    letter-spacing:.1em;color:#cfe;text-shadow:0 1px 6px #000}
+  .body{padding:18px 20px 22px}
+  .lname{font-size:24px;font-weight:800;line-height:1.15;margin:0 0 4px}
+  .lsub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;
+    font-size:12px;letter-spacing:.04em}
+  .grid2 .k{color:var(--muted);text-transform:uppercase;font-size:10px;
+    letter-spacing:.14em;margin-bottom:2px}
+  .grid2 .v{color:#e7eeff}
+
+  /* ---- the signature: T-minus clock ---- */
+  .clockwrap{padding:20px;display:flex;flex-direction:column;justify-content:center}
+  .tlabel{font-size:11px;letter-spacing:.32em;color:var(--muted);margin-bottom:8px}
+  .clock{font-family:"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+    font-weight:700;font-size:46px;letter-spacing:.02em;line-height:1;
+    color:var(--ink);display:flex;gap:6px;align-items:flex-end}
+  .clock .sgn{color:var(--nasa-red);font-size:30px;padding-bottom:4px}
+  .seg{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .seg u{font-style:normal;font-size:10px;letter-spacing:.18em;color:var(--muted)}
+  .clock.go{color:#fff;text-shadow:0 0 22px rgba(252,61,33,.45)}
+  .scan{height:2px;margin-top:16px;border-radius:2px;
+    background:linear-gradient(90deg,transparent,var(--nasa-blue),var(--nasa-red),transparent);
+    opacity:.7;animation:sweep 3.4s linear infinite;background-size:200% 100%}
+  @keyframes sweep{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  /* ---- briefing + feed ---- */
+  .cols{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-top:18px}
+  .ph{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;border-bottom:1px solid var(--line)}
+  .ph h2{margin:0;font-size:11px;letter-spacing:.2em;color:var(--muted);
+    text-transform:uppercase;font-weight:700}
+  .ph .src{font-size:10px;letter-spacing:.1em;color:#56689a}
+  .briefing{padding:18px;font-size:15px;line-height:1.62;color:#dce6ff;min-height:120px}
+  .feed{padding:8px 10px;max-height:260px;overflow:auto}
+  .nrow{display:flex;gap:12px;padding:11px 10px;border-bottom:1px solid rgba(29,42,82,.6)}
+  .nrow:last-child{border-bottom:0}
+  .nchip{flex:0 0 auto;font-size:9px;letter-spacing:.1em;font-weight:700;
+    padding:4px 8px;border-radius:5px;height:fit-content;text-transform:uppercase}
+  .nchip.WhatsApp{background:rgba(25,210,124,.14);color:var(--go);border:1px solid rgba(25,210,124,.35)}
+  .nchip.Discord{background:rgba(88,101,242,.14);color:#aab3ff;border:1px solid rgba(88,101,242,.4)}
+  .ninfo b{display:block;font-size:13px;color:#eaf1ff;margin-bottom:2px}
+  .ninfo span{font-size:11px;color:var(--muted);letter-spacing:.05em}
+  .empty{padding:26px 18px;color:var(--muted);font-size:13px;line-height:1.6}
+  .history{padding:10px;display:grid;gap:8px;max-height:260px;overflow:auto}
+  .hitem{width:100%;text-align:left;border:1px solid rgba(29,42,82,.75);background:rgba(10,16,36,.72);color:var(--ink);border-radius:6px;padding:10px 11px;cursor:pointer;font:inherit}
+  .hitem b{display:block;font-size:13px;line-height:1.35;color:#eaf1ff}
+  .hitem span{display:block;margin-top:4px;font-size:10px;line-height:1.4;color:var(--muted);letter-spacing:.04em}
+  .hitem.active{border-color:var(--nasa-red);box-shadow:0 0 0 1px rgba(252,61,33,.35),0 0 18px rgba(252,61,33,.16)}
+
+  footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+    font-size:11px;letter-spacing:.08em;color:#56689a}
+  .barlbl{display:flex;align-items:center;gap:8px}
+  .barlbl i{width:34px;height:4px;border-radius:3px;display:inline-block;
+    background:linear-gradient(90deg,var(--nasa-blue),var(--nasa-red))}
+  footer .n8n{color:var(--n8n)}
+  a{color:#8fb0ff;text-decoration:none}
+
+  @media(max-width:860px){
+    .hero{grid-template-columns:1fr}
+    .cols{grid-template-columns:1fr}
+    .clock{font-size:38px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .scan,.live i{animation:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="meatball"></div>
+      <div class="title">MISSION <b>LAUNCH</b> BOARD</div>
+    </div>
+    <div class="poweredby"><span class="dot"></span>POWERED BY <strong>n8n</strong></div>
+  </header>
+
+  <div class="strip">
+    <span class="chip mode" id="modeChip">--</span>
+    <span class="chip status" id="statusChip" style="display:none"></span>
+    <span id="syncLbl">awaiting sync</span>
+    <span class="live"><i></i>LIVE &middot; auto-refresh 30s</span>
+  </div>
+
+  <div id="root"></div>
+
+  <footer>
+    <span class="barlbl"><i></i> Data: TheSpaceDevs &middot; Briefing: OpenAI &middot; Alerts: CallMeBot / Discord</span>
+    <span>Orchestrated &amp; served entirely by <span class="n8n">n8n</span></span>
+  </footer>
+</div>
+
+<script>window.__BOOT__={hasData:false,latest:null,notifications:[]};</script>
+<script>
+(function(){
+  "use strict";
+
+  // ===== CONFIG =================================================
+  // Leave empty when this page is SERVED BY n8n (same origin).
+  // For GitHub Pages / standalone hosting, set this to your full
+  // n8n webhook URL, e.g. "https://your-n8n.example.com/webhook/launch-board".
+  var API_URL = "";
+  // =============================================================
+
+  function jsonUrl(){
+    var base = API_URL || (location.origin + location.pathname);
+    var sep = base.indexOf("?") > -1 ? "&" : "?";
+    return base + sep + "format=json&_=" + Date.now();
+  }
+
+  var state = (window.__BOOT__ || {hasData:false, latest:null, notifications:[]});
+  var selectedHistoryIndex = -1;
+
+  function pad(n){ return ("0" + n).slice(-2); }
+  function esc(s){ var d=document.createElement("div"); d.textContent=(s==null?"":String(s)); return d.innerHTML; }
+
+  function fmtNet(iso){
+    if(!iso) return "TBD";
+    var d=new Date(iso);
+    if(isNaN(d.getTime())) return "TBD";
+    return d.toUTCString().replace("GMT","UTC");
+  }
+
+  function renderShell(){
+    var root=document.getElementById("root");
+    if(!state.hasData || !state.latest){
+      root.innerHTML='<div class="card"><div class="empty">'+
+        '<b style="color:#eaf1ff">Awaiting first telemetry sync.</b><br>'+
+        'Trigger the schedule workflow in n8n (or wait for the next interval). '+
+        'Once it runs, the next launch, an AI briefing, and the alert feed appear here.'+
+        '</div></div>';
+      document.getElementById("modeChip").textContent="STANDBY";
+      return;
+    }
+    var history = Array.isArray(state.latest.previousLaunches) ? state.latest.previousLaunches : [];
+    var L=(selectedHistoryIndex >= 0 && history[selectedHistoryIndex]) ? history[selectedHistoryIndex] : (state.latest.launch||{});
+    var mode=(selectedHistoryIndex >= 0 ? "history" : (state.latest.mode||"preview")).toUpperCase();
+    var brief=(selectedHistoryIndex >= 0 ? (L.mission_description || "Select another launch or run the workflow to refresh the latest briefing.") : (state.latest.briefing||""));
+    var media=L.image ? 'style="background-image:url(\''+esc(L.image)+'\')"' : "";
+
+    document.getElementById("modeChip").textContent=mode;
+    var sc=document.getElementById("statusChip");
+    if(L.status){ sc.style.display=""; sc.textContent=L.status;
+      sc.style.background = /go|success|good/i.test(L.status) ? "#19d27c" : "#f0b53b"; }
+    document.getElementById("syncLbl").textContent =
+      "synced " + fmtNet(state.latest.generatedAt);
+
+    root.innerHTML =
+      '<div class="hero">'+
+        '<div class="card">'+
+          '<div class="media" '+media+'><div class="pad">'+esc(L.pad||"")+
+            (L.location? " &middot; "+esc(L.location):"")+'</div></div>'+
+          '<div class="body">'+
+            '<h1 class="lname">'+esc(L.name||"To be announced")+'</h1>'+
+            '<div class="lsub">'+esc(L.provider||"")+(L.rocket?" &middot; "+esc(L.rocket):"")+'</div>'+
+            '<div class="grid2">'+
+              cell("Mission", L.mission||"--")+
+              cell("Vehicle", L.rocket||"--")+
+              cell("Window (NET)", fmtNet(L.net))+
+              cell("Status", L.status||"--")+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="card clockwrap">'+
+          '<div class="tlabel" id="tlabel">T-MINUS</div>'+
+          '<div class="clock" id="clock"><span class="sgn">T-</span><span>--</span></div>'+
+          '<div class="scan"></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="cols">'+
+        '<div class="card">'+
+          '<div class="ph"><h2>AI Mission Briefing</h2><span class="src">gpt model &middot; live</span></div>'+
+          '<div class="briefing">'+ (brief? esc(brief) : "Generating briefing on next sync...") +'</div>'+
+        '</div>'+
+        '<div class="card">'+
+          '<div class="ph"><h2>Alert Feed</h2><span class="src">multi-channel</span></div>'+
+          '<div class="feed" id="feed"></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="cols">'+
+        '<div class="card">'+
+          '<div class="ph"><h2>Previous Launches</h2><span class="src">latest 10</span></div>'+
+          '<div class="history" id="history"></div>'+
+        '</div>'+
+        '<div class="card">'+
+          '<div class="ph"><h2>Selected Launch</h2><span class="src">click history item</span></div>'+
+          '<div class="briefing" id="selectedDetails"></div>'+
+        '</div>'+
+      '</div>';
+    renderFeed();
+    renderHistory(history, L);
+    tick();
+  }
+
+  function cell(k,v){
+    return '<div><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+'</div></div>';
+  }
+
+  function renderHistory(history, selected){
+    var wrap=document.getElementById("history"), details=document.getElementById("selectedDetails");
+    if(!wrap || !details) return;
+    if(!history.length){
+      wrap.innerHTML='<div class="empty">Run the workflow once from Schedule Trigger to load previous launches.</div>';
+      details.innerHTML='No previous-launch history loaded yet.';
+      return;
+    }
+    var html="";
+    for(var i=0;i<history.length;i++){
+      var l=history[i]||{};
+      var cls=(i===selectedHistoryIndex)?"hitem active":"hitem";
+      html+='<button class="'+cls+'" data-history-index="'+i+'"><b>'+esc(l.name||"Unknown launch")+'</b>'+
+        '<span>'+fmtNet(l.net)+' &middot; '+esc(l.provider||"")+' &middot; '+esc(l.status||"")+'</span></button>';
+    }
+    wrap.innerHTML=html;
+    details.innerHTML='<b style="color:#eaf1ff">'+esc(selected.name||"Current launch")+'</b><br>'+
+      esc(selected.provider||"")+(selected.rocket?' &middot; '+esc(selected.rocket):'')+'<br>'+
+      esc(selected.pad||"")+(selected.location?' &middot; '+esc(selected.location):'')+'<br><br>'+
+      esc(selected.mission_description||"No mission description available.");
+    var buttons=wrap.querySelectorAll("[data-history-index]");
+    for(var j=0;j<buttons.length;j++){
+      buttons[j].addEventListener("click",function(){
+        selectedHistoryIndex=parseInt(this.getAttribute("data-history-index"),10);
+        renderShell();
+      });
+    }
+  }
+
+  function renderFeed(){
+    var feed=document.getElementById("feed");
+    if(!feed) return;
+    var n=state.notifications||[];
+    if(!n.length){ feed.innerHTML='<div class="empty">No alerts dispatched yet.</div>'; return; }
+    var html="";
+    for(var i=0;i<n.length;i++){
+      var it=n[i];
+      var ch=esc(it.channel||"Alert");
+      html+='<div class="nrow">'+
+        '<span class="nchip '+ch+'">'+ch+'</span>'+
+        '<div class="ninfo"><b>'+esc(it.title||"Launch update")+'</b>'+
+        '<span>'+esc(it.status||"sent")+' &middot; '+fmtNet(it.at)+'</span></div></div>';
+    }
+    feed.innerHTML=html;
+  }
+
+  function tick(){
+    var el=document.getElementById("clock");
+    if(!el || !state.latest || !state.latest.launch) return;
+    var net=state.latest.launch.net;
+    if(!net){ el.innerHTML='<span class="sgn">T-</span><span>TBD</span>'; return; }
+    var diff=new Date(net).getTime()-Date.now();
+    var past=diff<0; var s=Math.abs(Math.floor(diff/1000));
+    var d=Math.floor(s/86400); s-=d*86400;
+    var h=Math.floor(s/3600); s-=h*3600;
+    var m=Math.floor(s/60); s-=m*60;
+    document.getElementById("tlabel").textContent = past ? "T-PLUS (LIFTOFF)" : "T-MINUS";
+    el.className = "clock" + (past? " go":"");
+    el.innerHTML='<span class="sgn">'+(past?"T+":"T-")+'</span>'+
+      seg(d,"DAYS")+seg(pad(h),"HRS")+seg(pad(m),"MIN")+seg(pad(s),"SEC");
+  }
+  function seg(val,lbl){ return '<span class="seg"><span>'+val+'</span><u>'+lbl+'</u></span>'; }
+
+  function fetchData(){
+    fetch(jsonUrl(),{cache:"no-store"})
+      .then(function(r){return r.json();})
+      .then(function(d){ if(d){ state=d; if(selectedHistoryIndex >= ((state.latest&&state.latest.previousLaunches)||[]).length) selectedHistoryIndex=-1; renderShell(); } })
+      .catch(function(){ /* keep last good render */ });
+  }
+
+  // starfield
+  (function(){
+    var c=document.getElementById("stars"), x=c.getContext("2d"), stars=[];
+    function size(){ c.width=innerWidth; c.height=innerHeight;
+      stars=[]; var n=Math.min(220,Math.floor(innerWidth*innerHeight/9000));
+      for(var i=0;i<n;i++) stars.push({x:Math.random()*c.width,y:Math.random()*c.height,
+        z:Math.random()*1.6+0.2,t:Math.random()*6.28}); }
+    function draw(){ x.clearRect(0,0,c.width,c.height);
+      for(var i=0;i<stars.length;i++){ var s=stars[i];
+        s.t+=0.02; var a=0.35+0.45*Math.sin(s.t);
+        x.fillStyle="rgba(180,205,255,"+a.toFixed(2)+")";
+        x.fillRect(s.x,s.y,s.z,s.z); }
+      requestAnimationFrame(draw); }
+    addEventListener("resize",size); size(); draw();
+  })();
+
+  renderShell();
+  if(window.__BOOT__) fetchData();   // refresh boot data
+  else fetchData();                  // standalone first load
+  setInterval(fetchData,30000);
+  setInterval(tick,1000);
+})();
+</script>
+</body>
+</html>

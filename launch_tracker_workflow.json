@@ -1,0 +1,757 @@
+{
+  "name": "NASA Mission Launch Board (n8n meetup demo)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "sched",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -40,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Demo configuration. Move secrets to env/credentials for production.\nreturn [{ json: {\n  openai:   { model: 'gpt-4o-mini' },\n  launchApi:{ base: 'https://ll.thespacedevs.com/2.2.0' },\n  callmebot:{ enabled: true,  phone: '+10000000000', apikey: 'YOUR_CALLMEBOT_APIKEY' },\n  discord:  { enabled: false, webhookUrl: 'https://discord.com/api/webhooks/XXX/YYY' },\n  forceMode:'auto',        // 'auto' | 'preview' | 'recap'  (force a branch for demos)\n  recapWindowHours: 24\n}}];"
+      },
+      "id": "cfg",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.launchApi.base }}/launch/upcoming/?limit=1&mode=detailed&hide_recent_previous=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-launch-board-demo"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "getUp",
+      "name": "Get Upcoming Launch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.launchApi.base }}/launch/previous/?limit=10&mode=detailed",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-launch-board-demo"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "getPrev",
+      "name": "Get Previous Launch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "mrg1",
+      "name": "Merge Launches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg  = $('Config').first().json;\nconst up   = ($('Get Upcoming Launch').first().json.results || [])[0] || null;\nconst prevResults = $('Get Previous Launch').first().json.results || [];\nconst prev = prevResults[0] || null;\nfunction shape(l){\n  if(!l) return null;\n  let webcast = '';\n  if (Array.isArray(l.vidURLs) && l.vidURLs[0]) webcast = l.vidURLs[0].url || '';\n  return {\n    id: l.id, name: l.name,\n    status: (l.status && l.status.name) || 'Unknown',\n    net: l.net,\n    provider: (l.launch_service_provider && l.launch_service_provider.name) || '',\n    rocket: (l.rocket && l.rocket.configuration && (l.rocket.configuration.full_name || l.rocket.configuration.name)) || '',\n    mission: (l.mission && l.mission.name) || '',\n    mission_description: (l.mission && l.mission.description) || '',\n    pad: (l.pad && l.pad.name) || '',\n    location: (l.pad && l.pad.location && l.pad.location.name) || '',\n    image: l.image || '', webcast\n  };\n}\nlet mode = cfg.forceMode;\nif(!mode || mode === 'auto') {\n  mode = 'preview';\n  if(prev && prev.net){\n    const ageH = (Date.now() - new Date(prev.net).getTime()) / 3600000;\n    if(ageH >= 0 && ageH <= (cfg.recapWindowHours || 24)) mode = 'recap';\n  }\n}\nconst previousLaunches = prevResults.map(shape).filter(Boolean);\nconst launch = (mode === 'recap' ? shape(prev) : shape(up)) || {\n  name:'To be announced', status:'TBD', net:null, provider:'', rocket:'',\n  mission:'', mission_description:'', pad:'', location:'', image:'', webcast:''\n};\nconst aiUser = [\n  'Name: '    + launch.name,\n  'Status: '  + launch.status,\n  'Provider: '+ launch.provider,\n  'Rocket: '  + launch.rocket,\n  'Mission: ' + launch.mission,\n  'Pad: '     + launch.pad + ' (' + launch.location + ')',\n  'NET: '     + (launch.net || 'TBD'),\n  'Details: ' + (launch.mission_description || '').slice(0, 700)\n].join(String.fromCharCode(10));\nreturn [{ json: { mode, launch, previousLaunches, aiUser, generatedAt: new Date().toISOString() } }];"
+      },
+      "id": "sel",
+      "name": "Select Headline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.mode }}",
+              "rightValue": "recap",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "isRecap",
+      "name": "Is Recap?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1060,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": $('Config').first().json.openai.model,\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"You are a NASA mission commentator. Write a vivid, accurate, concise RECAP (90-130 words) of the launch below that just occurred, for technical engineers and drone/aerospace enthusiasts. Plain prose, no markdown headers.\" },\n    { \"role\": \"user\", \"content\": $json.aiUser }\n  ],\n  \"temperature\": 0.7\n} }}",
+        "options": {}
+      },
+      "id": "aiRecap",
+      "name": "AI Recap",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": $('Config').first().json.openai.model,\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"You are a NASA mission commentator. Write a vivid, accurate, concise PREVIEW (90-130 words) of the UPCOMING launch below for technical engineers and drone/aerospace enthusiasts. Plain prose, no markdown headers.\" },\n    { \"role\": \"user\", \"content\": $json.aiUser }\n  ],\n  \"temperature\": 0.7\n} }}",
+        "options": {}
+      },
+      "id": "aiPrev",
+      "name": "AI Preview",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "mrg2",
+      "name": "Merge AI",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1500,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sd  = $getWorkflowStaticData('global');\nconst sel = $('Select Headline').first().json;\nconst ai  = ($json.choices && $json.choices[0] && $json.choices[0].message\n            && $json.choices[0].message.content) || '';\nconst launch = sel.launch || {};\n\n// Persist latest state for the webhook page.\nsd.latest = {\n  mode: sel.mode,\n  launch,\n  previousLaunches: Array.isArray(sel.previousLaunches) ? sel.previousLaunches : [],\n  briefing: ai.trim(),\n  generatedAt: new Date().toISOString()\n};\nif(!Array.isArray(sd.notifications)) sd.notifications = [];\n\nconst cfg = $('Config').first().json;\nconst verb = sel.mode === 'recap' ? 'RECAP' : 'PREVIEW';\nconst nl = String.fromCharCode(10);\nconst message = '🚀 ' + verb + ': ' + (launch.name || 'TBD') + nl\n  + (launch.provider || '') + ' • ' + (launch.rocket || '') + nl\n  + 'NET ' + (launch.net || 'TBD') + nl + nl + sd.latest.briefing;\n\nreturn [{ json: {\n  message, mode: sel.mode, launchName: launch.name || 'TBD',\n  whatsapp: cfg.callmebot, discord: cfg.discord\n}}];"
+      },
+      "id": "bn",
+      "name": "Build Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.whatsapp.enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      },
+      "id": "ifWa",
+      "name": "WhatsApp Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1940,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.callmebot.com/whatsapp.php?phone={{ encodeURIComponent($json.whatsapp.phone) }}&text={{ encodeURIComponent($json.message) }}&apikey={{ $json.whatsapp.apikey }}",
+        "options": {}
+      },
+      "id": "sendWa",
+      "name": "Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nif(!Array.isArray(sd.notifications)) sd.notifications = [];\nconst bn = $('Build Notification').first().json;\nsd.notifications.unshift({\n  channel: 'WhatsApp',\n  target: bn.whatsapp.phone,\n  title: bn.launchName,\n  status: 'dispatched',\n  at: new Date().toISOString()\n});\nsd.notifications = sd.notifications.slice(0, 25);\nreturn [{ json: { logged: true } }];"
+      },
+      "id": "logWa",
+      "name": "Log WhatsApp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2380,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Build Notification').first().json.discord.enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      },
+      "id": "ifDc",
+      "name": "Discord Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Build Notification').first().json.discord.webhookUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"content\": $('Build Notification').first().json.message } }}",
+        "options": {}
+      },
+      "id": "sendDc",
+      "name": "Send Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2820,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nif(!Array.isArray(sd.notifications)) sd.notifications = [];\nconst bn = $('Build Notification').first().json;\nsd.notifications.unshift({\n  channel: 'Discord',\n  target: 'discord-webhook',\n  title: bn.launchName,\n  status: 'dispatched',\n  at: new Date().toISOString()\n});\nsd.notifications = sd.notifications.slice(0, 25);\nreturn [{ json: { logged: true } }];"
+      },
+      "id": "logDc",
+      "name": "Log Discord",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3040,
+        -120
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "done",
+      "name": "Done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "launch-board",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "hook",
+      "name": "Webhook (Launch Board)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        460
+      ],
+      "webhookId": "launch-board-demo"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nreturn [{ json: {\n  hasData: !!sd.latest,\n  latest: sd.latest || null,\n  notifications: Array.isArray(sd.notifications) ? sd.notifications : []\n}}];"
+      },
+      "id": "load",
+      "name": "Load State",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Webhook (Launch Board)').first().json.query.format }}",
+              "rightValue": "json",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "wantsJson",
+      "name": "Wants JSON?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"hasData\": $json.hasData, \"latest\": $json.latest, \"notifications\": $json.notifications } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respJson",
+      "name": "Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const boot = JSON.stringify({\n  hasData: $json.hasData, latest: $json.latest,\n  notifications: $json.notifications\n});\nconst TEMPLATE = \"<!doctype html>\\n<html lang=\\\"en\\\">\\n<head>\\n<meta charset=\\\"utf-8\\\">\\n<meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1\\\">\\n<title>Mission Launch Board</title>\\n<style>\\n  :root{\\n    --nasa-blue:#0B3D91;      /* official NASA blue */\\n    --nasa-red:#FC3D21;       /* official NASA red */\\n    --n8n:#EA4B71;            /* n8n accent */\\n    --void:#04060f;           /* deep space */\\n    --panel:#0a1024;          /* telemetry panel */\\n    --panel-2:#0f1733;\\n    --line:#1d2a52;           /* hairline */\\n    --ink:#eef3ff;            /* primary text */\\n    --muted:#8aa0c8;          /* secondary text */\\n    --go:#19d27c;\\n    --discord:#5865F2;\\n  }\\n  *{box-sizing:border-box}\\n  html,body{margin:0;height:100%}\\n  body{\\n    background:var(--void);\\n    color:var(--ink);\\n    font-family:\\\"Helvetica Neue\\\",Helvetica,Arial,system-ui,sans-serif;\\n    -webkit-font-smoothing:antialiased;\\n    overflow-x:hidden;\\n  }\\n  #stars{position:fixed;inset:0;z-index:0;display:block}\\n  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 20px 60px}\\n\\n  /* ---- header ---- */\\n  header{display:flex;align-items:center;justify-content:space-between;gap:16px;\\n    padding-bottom:16px;border-bottom:1px solid var(--line)}\\n  .brand{display:flex;align-items:center;gap:12px}\\n  .meatball{width:30px;height:30px;border-radius:50%;\\n    background:radial-gradient(circle at 32% 30%, #2a5fd6, var(--nasa-blue) 60%);\\n    box-shadow:0 0 0 2px #06122e, 0 0 18px rgba(43,95,214,.5)}\\n  .title{font-weight:800;letter-spacing:.22em;font-size:13px}\\n  .title b{color:var(--nasa-red)}\\n  .poweredby{display:flex;align-items:center;gap:8px;border:1px solid var(--line);\\n    border-radius:999px;padding:6px 12px;background:rgba(234,75,113,.06);\\n    font-size:11px;letter-spacing:.14em;color:var(--muted)}\\n  .poweredby .dot{width:8px;height:8px;border-radius:50%;background:var(--n8n);\\n    box-shadow:0 0 10px var(--n8n)}\\n  .poweredby strong{color:var(--n8n);letter-spacing:.08em}\\n\\n  /* ---- status strip ---- */\\n  .strip{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:16px 0 22px;\\n    font-size:11px;letter-spacing:.12em;color:var(--muted)}\\n  .chip{border:1px solid var(--line);border-radius:6px;padding:5px 10px;\\n    text-transform:uppercase}\\n  .chip.mode{color:#dbe6ff;border-color:#2c3f76;background:rgba(11,61,145,.25)}\\n  .chip.status{color:#04130b}\\n  .live{display:inline-flex;align-items:center;gap:7px;margin-left:auto;color:var(--go)}\\n  .live i{width:8px;height:8px;border-radius:50%;background:var(--go);\\n    box-shadow:0 0 10px var(--go);animation:pulse 1.6s infinite}\\n  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}\\n\\n  /* ---- hero ---- */\\n  .hero{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}\\n  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));\\n    border:1px solid var(--line);border-radius:14px;overflow:hidden}\\n  .media{height:200px;background-size:cover;background-position:center;\\n    position:relative;border-bottom:1px solid var(--line);\\n    background-color:#0a1430}\\n  .media:after{content:\\\"\\\";position:absolute;inset:0;\\n    background:linear-gradient(180deg,rgba(4,6,15,0) 35%,rgba(4,6,15,.85))}\\n  .pad{position:absolute;left:14px;bottom:12px;z-index:2;font-size:11px;\\n    letter-spacing:.1em;color:#cfe;text-shadow:0 1px 6px #000}\\n  .body{padding:18px 20px 22px}\\n  .lname{font-size:24px;font-weight:800;line-height:1.15;margin:0 0 4px}\\n  .lsub{color:var(--muted);font-size:13px;margin-bottom:18px}\\n  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;\\n    font-size:12px;letter-spacing:.04em}\\n  .grid2 .k{color:var(--muted);text-transform:uppercase;font-size:10px;\\n    letter-spacing:.14em;margin-bottom:2px}\\n  .grid2 .v{color:#e7eeff}\\n\\n  /* ---- the signature: T-minus clock ---- */\\n  .clockwrap{padding:20px;display:flex;flex-direction:column;justify-content:center}\\n  .tlabel{font-size:11px;letter-spacing:.32em;color:var(--muted);margin-bottom:8px}\\n  .clock{font-family:\\\"SFMono-Regular\\\",Menlo,Consolas,\\\"Liberation Mono\\\",monospace;\\n    font-weight:700;font-size:46px;letter-spacing:.02em;line-height:1;\\n    color:var(--ink);display:flex;gap:6px;align-items:flex-end}\\n  .clock .sgn{color:var(--nasa-red);font-size:30px;padding-bottom:4px}\\n  .seg{display:flex;flex-direction:column;align-items:center;gap:6px}\\n  .seg u{font-style:normal;font-size:10px;letter-spacing:.18em;color:var(--muted)}\\n  .clock.go{color:#fff;text-shadow:0 0 22px rgba(252,61,33,.45)}\\n  .scan{height:2px;margin-top:16px;border-radius:2px;\\n    background:linear-gradient(90deg,transparent,var(--nasa-blue),var(--nasa-red),transparent);\\n    opacity:.7;animation:sweep 3.4s linear infinite;background-size:200% 100%}\\n  @keyframes sweep{0%{background-position:200% 0}100%{background-position:-200% 0}}\\n\\n  /* ---- briefing + feed ---- */\\n  .cols{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-top:18px}\\n  .ph{display:flex;align-items:center;justify-content:space-between;\\n    padding:14px 18px;border-bottom:1px solid var(--line)}\\n  .ph h2{margin:0;font-size:11px;letter-spacing:.2em;color:var(--muted);\\n    text-transform:uppercase;font-weight:700}\\n  .ph .src{font-size:10px;letter-spacing:.1em;color:#56689a}\\n  .briefing{padding:18px;font-size:15px;line-height:1.62;color:#dce6ff;min-height:120px}\\n  .feed{padding:8px 10px;max-height:260px;overflow:auto}\\n  .nrow{display:flex;gap:12px;padding:11px 10px;border-bottom:1px solid rgba(29,42,82,.6)}\\n  .nrow:last-child{border-bottom:0}\\n  .nchip{flex:0 0 auto;font-size:9px;letter-spacing:.1em;font-weight:700;\\n    padding:4px 8px;border-radius:5px;height:fit-content;text-transform:uppercase}\\n  .nchip.WhatsApp{background:rgba(25,210,124,.14);color:var(--go);border:1px solid rgba(25,210,124,.35)}\\n  .nchip.Discord{background:rgba(88,101,242,.14);color:#aab3ff;border:1px solid rgba(88,101,242,.4)}\\n  .ninfo b{display:block;font-size:13px;color:#eaf1ff;margin-bottom:2px}\\n  .ninfo span{font-size:11px;color:var(--muted);letter-spacing:.05em}\\n  .empty{padding:26px 18px;color:var(--muted);font-size:13px;line-height:1.6}\\n  .history{padding:10px;display:grid;gap:8px;max-height:260px;overflow:auto}\\n  .hitem{width:100%;text-align:left;border:1px solid rgba(29,42,82,.75);background:rgba(10,16,36,.72);color:var(--ink);border-radius:6px;padding:10px 11px;cursor:pointer;font:inherit}\\n  .hitem b{display:block;font-size:13px;line-height:1.35;color:#eaf1ff}\\n  .hitem span{display:block;margin-top:4px;font-size:10px;line-height:1.4;color:var(--muted);letter-spacing:.04em}\\n  .hitem.active{border-color:var(--nasa-red);box-shadow:0 0 0 1px rgba(252,61,33,.35),0 0 18px rgba(252,61,33,.16)}\\n\\n  footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);\\n    display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;\\n    font-size:11px;letter-spacing:.08em;color:#56689a}\\n  .barlbl{display:flex;align-items:center;gap:8px}\\n  .barlbl i{width:34px;height:4px;border-radius:3px;display:inline-block;\\n    background:linear-gradient(90deg,var(--nasa-blue),var(--nasa-red))}\\n  footer .n8n{color:var(--n8n)}\\n  a{color:#8fb0ff;text-decoration:none}\\n\\n  @media(max-width:860px){\\n    .hero{grid-template-columns:1fr}\\n    .cols{grid-template-columns:1fr}\\n    .clock{font-size:38px}\\n  }\\n  @media(prefers-reduced-motion:reduce){\\n    .scan,.live i{animation:none}\\n  }\\n</style>\\n</head>\\n<body>\\n<canvas id=\\\"stars\\\"></canvas>\\n<div class=\\\"wrap\\\">\\n  <header>\\n    <div class=\\\"brand\\\">\\n      <div class=\\\"meatball\\\"></div>\\n      <div class=\\\"title\\\">MISSION <b>LAUNCH</b> BOARD</div>\\n    </div>\\n    <div class=\\\"poweredby\\\"><span class=\\\"dot\\\"></span>POWERED BY <strong>n8n</strong></div>\\n  </header>\\n\\n  <div class=\\\"strip\\\">\\n    <span class=\\\"chip mode\\\" id=\\\"modeChip\\\">--</span>\\n    <span class=\\\"chip status\\\" id=\\\"statusChip\\\" style=\\\"display:none\\\"></span>\\n    <span id=\\\"syncLbl\\\">awaiting sync</span>\\n    <span class=\\\"live\\\"><i></i>LIVE &middot; auto-refresh 30s</span>\\n  </div>\\n\\n  <div id=\\\"root\\\"></div>\\n\\n  <footer>\\n    <span class=\\\"barlbl\\\"><i></i> Data: TheSpaceDevs &middot; Briefing: OpenAI &middot; Alerts: CallMeBot / Discord</span>\\n    <span>Orchestrated &amp; served entirely by <span class=\\\"n8n\\\">n8n</span></span>\\n  </footer>\\n</div>\\n\\n<script>/*BOOT*/</script>\\n<script>\\n(function(){\\n  \\\"use strict\\\";\\n\\n  // ===== CONFIG =================================================\\n  // Leave empty when this page is SERVED BY n8n (same origin).\\n  // For GitHub Pages / standalone hosting, set this to your full\\n  // n8n webhook URL, e.g. \\\"https://your-n8n.example.com/webhook/launch-board\\\".\\n  var API_URL = \\\"\\\";\\n  // =============================================================\\n\\n  function jsonUrl(){\\n    var base = API_URL || (location.origin + location.pathname);\\n    var sep = base.indexOf(\\\"?\\\") > -1 ? \\\"&\\\" : \\\"?\\\";\\n    return base + sep + \\\"format=json&_=\\\" + Date.now();\\n  }\\n\\n  var state = (window.__BOOT__ || {hasData:false, latest:null, notifications:[]});\\n  var selectedHistoryIndex = -1;\\n\\n  function pad(n){ return (\\\"0\\\" + n).slice(-2); }\\n  function esc(s){ var d=document.createElement(\\\"div\\\"); d.textContent=(s==null?\\\"\\\":String(s)); return d.innerHTML; }\\n\\n  function fmtNet(iso){\\n    if(!iso) return \\\"TBD\\\";\\n    var d=new Date(iso);\\n    if(isNaN(d.getTime())) return \\\"TBD\\\";\\n    return d.toUTCString().replace(\\\"GMT\\\",\\\"UTC\\\");\\n  }\\n\\n  function renderShell(){\\n    var root=document.getElementById(\\\"root\\\");\\n    if(!state.hasData || !state.latest){\\n      root.innerHTML='<div class=\\\"card\\\"><div class=\\\"empty\\\">'+\\n        '<b style=\\\"color:#eaf1ff\\\">Awaiting first telemetry sync.</b><br>'+\\n        'Trigger the schedule workflow in n8n (or wait for the next interval). '+\\n        'Once it runs, the next launch, an AI briefing, and the alert feed appear here.'+\\n        '</div></div>';\\n      document.getElementById(\\\"modeChip\\\").textContent=\\\"STANDBY\\\";\\n      return;\\n    }\\n    var history = Array.isArray(state.latest.previousLaunches) ? state.latest.previousLaunches : [];\\n    var L=(selectedHistoryIndex >= 0 && history[selectedHistoryIndex]) ? history[selectedHistoryIndex] : (state.latest.launch||{});\\n    var mode=(selectedHistoryIndex >= 0 ? \\\"history\\\" : (state.latest.mode||\\\"preview\\\")).toUpperCase();\\n    var brief=(selectedHistoryIndex >= 0 ? (L.mission_description || \\\"Select another launch or run the workflow to refresh the latest briefing.\\\") : (state.latest.briefing||\\\"\\\"));\\n    var media=L.image ? 'style=\\\"background-image:url(\\\\''+esc(L.image)+'\\\\')\\\"' : \\\"\\\";\\n\\n    document.getElementById(\\\"modeChip\\\").textContent=mode;\\n    var sc=document.getElementById(\\\"statusChip\\\");\\n    if(L.status){ sc.style.display=\\\"\\\"; sc.textContent=L.status;\\n      sc.style.background = /go|success|good/i.test(L.status) ? \\\"#19d27c\\\" : \\\"#f0b53b\\\"; }\\n    document.getElementById(\\\"syncLbl\\\").textContent =\\n      \\\"synced \\\" + fmtNet(state.latest.generatedAt);\\n\\n    root.innerHTML =\\n      '<div class=\\\"hero\\\">'+\\n        '<div class=\\\"card\\\">'+\\n          '<div class=\\\"media\\\" '+media+'><div class=\\\"pad\\\">'+esc(L.pad||\\\"\\\")+\\n            (L.location? \\\" &middot; \\\"+esc(L.location):\\\"\\\")+'</div></div>'+\\n          '<div class=\\\"body\\\">'+\\n            '<h1 class=\\\"lname\\\">'+esc(L.name||\\\"To be announced\\\")+'</h1>'+\\n            '<div class=\\\"lsub\\\">'+esc(L.provider||\\\"\\\")+(L.rocket?\\\" &middot; \\\"+esc(L.rocket):\\\"\\\")+'</div>'+\\n            '<div class=\\\"grid2\\\">'+\\n              cell(\\\"Mission\\\", L.mission||\\\"--\\\")+\\n              cell(\\\"Vehicle\\\", L.rocket||\\\"--\\\")+\\n              cell(\\\"Window (NET)\\\", fmtNet(L.net))+\\n              cell(\\\"Status\\\", L.status||\\\"--\\\")+\\n            '</div>'+\\n          '</div>'+\\n        '</div>'+\\n        '<div class=\\\"card clockwrap\\\">'+\\n          '<div class=\\\"tlabel\\\" id=\\\"tlabel\\\">T-MINUS</div>'+\\n          '<div class=\\\"clock\\\" id=\\\"clock\\\"><span class=\\\"sgn\\\">T-</span><span>--</span></div>'+\\n          '<div class=\\\"scan\\\"></div>'+\\n        '</div>'+\\n      '</div>'+\\n      '<div class=\\\"cols\\\">'+\\n        '<div class=\\\"card\\\">'+\\n          '<div class=\\\"ph\\\"><h2>AI Mission Briefing</h2><span class=\\\"src\\\">gpt model &middot; live</span></div>'+\\n          '<div class=\\\"briefing\\\">'+ (brief? esc(brief) : \\\"Generating briefing on next sync...\\\") +'</div>'+\\n        '</div>'+\\n        '<div class=\\\"card\\\">'+\\n          '<div class=\\\"ph\\\"><h2>Alert Feed</h2><span class=\\\"src\\\">multi-channel</span></div>'+\\n          '<div class=\\\"feed\\\" id=\\\"feed\\\"></div>'+\\n        '</div>'+\\n      '</div>'+\\n      '<div class=\\\"cols\\\">'+\\n        '<div class=\\\"card\\\">'+\\n          '<div class=\\\"ph\\\"><h2>Previous Launches</h2><span class=\\\"src\\\">latest 10</span></div>'+\\n          '<div class=\\\"history\\\" id=\\\"history\\\"></div>'+\\n        '</div>'+\\n        '<div class=\\\"card\\\">'+\\n          '<div class=\\\"ph\\\"><h2>Selected Launch</h2><span class=\\\"src\\\">click history item</span></div>'+\\n          '<div class=\\\"briefing\\\" id=\\\"selectedDetails\\\"></div>'+\\n        '</div>'+\\n      '</div>';\\n    renderFeed();\\n    renderHistory(history, L);\\n    tick();\\n  }\\n\\n  function cell(k,v){\\n    return '<div><div class=\\\"k\\\">'+esc(k)+'</div><div class=\\\"v\\\">'+esc(v)+'</div></div>';\\n  }\\n\\n  function renderHistory(history, selected){\\n    var wrap=document.getElementById(\\\"history\\\"), details=document.getElementById(\\\"selectedDetails\\\");\\n    if(!wrap || !details) return;\\n    if(!history.length){\\n      wrap.innerHTML='<div class=\\\"empty\\\">Run the workflow once from Schedule Trigger to load previous launches.</div>';\\n      details.innerHTML='No previous-launch history loaded yet.';\\n      return;\\n    }\\n    var html=\\\"\\\";\\n    for(var i=0;i<history.length;i++){\\n      var l=history[i]||{};\\n      var cls=(i===selectedHistoryIndex)?\\\"hitem active\\\":\\\"hitem\\\";\\n      html+='<button class=\\\"'+cls+'\\\" data-history-index=\\\"'+i+'\\\"><b>'+esc(l.name||\\\"Unknown launch\\\")+'</b>'+\\n        '<span>'+fmtNet(l.net)+' &middot; '+esc(l.provider||\\\"\\\")+' &middot; '+esc(l.status||\\\"\\\")+'</span></button>';\\n    }\\n    wrap.innerHTML=html;\\n    details.innerHTML='<b style=\\\"color:#eaf1ff\\\">'+esc(selected.name||\\\"Current launch\\\")+'</b><br>'+\\n      esc(selected.provider||\\\"\\\")+(selected.rocket?' &middot; '+esc(selected.rocket):'')+'<br>'+\\n      esc(selected.pad||\\\"\\\")+(selected.location?' &middot; '+esc(selected.location):'')+'<br><br>'+\\n      esc(selected.mission_description||\\\"No mission description available.\\\");\\n    var buttons=wrap.querySelectorAll(\\\"[data-history-index]\\\");\\n    for(var j=0;j<buttons.length;j++){\\n      buttons[j].addEventListener(\\\"click\\\",function(){\\n        selectedHistoryIndex=parseInt(this.getAttribute(\\\"data-history-index\\\"),10);\\n        renderShell();\\n      });\\n    }\\n  }\\n\\n  function renderFeed(){\\n    var feed=document.getElementById(\\\"feed\\\");\\n    if(!feed) return;\\n    var n=state.notifications||[];\\n    if(!n.length){ feed.innerHTML='<div class=\\\"empty\\\">No alerts dispatched yet.</div>'; return; }\\n    var html=\\\"\\\";\\n    for(var i=0;i<n.length;i++){\\n      var it=n[i];\\n      var ch=esc(it.channel||\\\"Alert\\\");\\n      html+='<div class=\\\"nrow\\\">'+\\n        '<span class=\\\"nchip '+ch+'\\\">'+ch+'</span>'+\\n        '<div class=\\\"ninfo\\\"><b>'+esc(it.title||\\\"Launch update\\\")+'</b>'+\\n        '<span>'+esc(it.status||\\\"sent\\\")+' &middot; '+fmtNet(it.at)+'</span></div></div>';\\n    }\\n    feed.innerHTML=html;\\n  }\\n\\n  function tick(){\\n    var el=document.getElementById(\\\"clock\\\");\\n    if(!el || !state.latest || !state.latest.launch) return;\\n    var net=state.latest.launch.net;\\n    if(!net){ el.innerHTML='<span class=\\\"sgn\\\">T-</span><span>TBD</span>'; return; }\\n    var diff=new Date(net).getTime()-Date.now();\\n    var past=diff<0; var s=Math.abs(Math.floor(diff/1000));\\n    var d=Math.floor(s/86400); s-=d*86400;\\n    var h=Math.floor(s/3600); s-=h*3600;\\n    var m=Math.floor(s/60); s-=m*60;\\n    document.getElementById(\\\"tlabel\\\").textContent = past ? \\\"T-PLUS (LIFTOFF)\\\" : \\\"T-MINUS\\\";\\n    el.className = \\\"clock\\\" + (past? \\\" go\\\":\\\"\\\");\\n    el.innerHTML='<span class=\\\"sgn\\\">'+(past?\\\"T+\\\":\\\"T-\\\")+'</span>'+\\n      seg(d,\\\"DAYS\\\")+seg(pad(h),\\\"HRS\\\")+seg(pad(m),\\\"MIN\\\")+seg(pad(s),\\\"SEC\\\");\\n  }\\n  function seg(val,lbl){ return '<span class=\\\"seg\\\"><span>'+val+'</span><u>'+lbl+'</u></span>'; }\\n\\n  function fetchData(){\\n    fetch(jsonUrl(),{cache:\\\"no-store\\\"})\\n      .then(function(r){return r.json();})\\n      .then(function(d){ if(d){ state=d; if(selectedHistoryIndex >= ((state.latest&&state.latest.previousLaunches)||[]).length) selectedHistoryIndex=-1; renderShell(); } })\\n      .catch(function(){ /* keep last good render */ });\\n  }\\n\\n  // starfield\\n  (function(){\\n    var c=document.getElementById(\\\"stars\\\"), x=c.getContext(\\\"2d\\\"), stars=[];\\n    function size(){ c.width=innerWidth; c.height=innerHeight;\\n      stars=[]; var n=Math.min(220,Math.floor(innerWidth*innerHeight/9000));\\n      for(var i=0;i<n;i++) stars.push({x:Math.random()*c.width,y:Math.random()*c.height,\\n        z:Math.random()*1.6+0.2,t:Math.random()*6.28}); }\\n    function draw(){ x.clearRect(0,0,c.width,c.height);\\n      for(var i=0;i<stars.length;i++){ var s=stars[i];\\n        s.t+=0.02; var a=0.35+0.45*Math.sin(s.t);\\n        x.fillStyle=\\\"rgba(180,205,255,\\\"+a.toFixed(2)+\\\")\\\";\\n        x.fillRect(s.x,s.y,s.z,s.z); }\\n      requestAnimationFrame(draw); }\\n    addEventListener(\\\"resize\\\",size); size(); draw();\\n  })();\\n\\n  renderShell();\\n  if(window.__BOOT__) fetchData();   // refresh boot data\\n  else fetchData();                  // standalone first load\\n  setInterval(fetchData,30000);\\n  setInterval(tick,1000);\\n})();\\n</script>\\n</body>\\n</html>\";\nconst html = TEMPLATE.replace('/*BOOT*/', 'window.__BOOT__=' + boot + ';');\nreturn [{ json: { html } }];"
+      },
+      "id": "render",
+      "name": "Render HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        580
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respHtml",
+      "name": "Respond HTML",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        860,
+        580
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Get Upcoming Launch",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Previous Launch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Upcoming Launch": {
+      "main": [
+        [
+          {
+            "node": "Merge Launches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Previous Launch": {
+      "main": [
+        [
+          {
+            "node": "Merge Launches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Launches": {
+      "main": [
+        [
+          {
+            "node": "Select Headline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Headline": {
+      "main": [
+        [
+          {
+            "node": "Is Recap?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Recap?": {
+      "main": [
+        [
+          {
+            "node": "AI Recap",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Recap": {
+      "main": [
+        [
+          {
+            "node": "Merge AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Preview": {
+      "main": [
+        [
+          {
+            "node": "Merge AI",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge AI": {
+      "main": [
+        [
+          {
+            "node": "Build Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Notification": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Enabled?": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Discord Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Log WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Discord Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord Enabled?": {
+      "main": [
+        [
+          {
+            "node": "Send Discord",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Discord": {
+      "main": [
+        [
+          {
+            "node": "Log Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Discord": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (Launch Board)": {
+      "main": [
+        [
+          {
+            "node": "Load State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load State": {
+      "main": [
+        [
+          {
+            "node": "Wants JSON?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wants JSON?": {
+      "main": [
+        [
+          {
+            "node": "Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Render HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render HTML": {
+      "main": [
+        [
+          {
+            "node": "Respond HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templatecredsSetupCompleted": false
+  }
+}

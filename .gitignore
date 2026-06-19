@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+
+# Local/generated artifacts
+current_n8n_workflow_response.json
+launch_tracker_workflow_4_fix.json
+launch_tracker_workflow_history.json
+files.zip
+
+# OS/editor noise
+.DS_Store
+*.log
