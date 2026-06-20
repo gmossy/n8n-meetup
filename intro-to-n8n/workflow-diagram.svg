@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="260" viewBox="0 0 1040 260" role="img" aria-labelledby="title desc">
+  <title id="title">Daily Top AI Headline n8n workflow</title>
+  <desc id="desc">A five step n8n workflow: Manual Trigger, RSS Read, Sort, Limit, Edit Fields.</desc>
+  <rect width="1040" height="260" rx="18" fill="#101828"/>
+  <g fill="none" stroke="#344054" stroke-width="2">
+    <path d="M188 130h54"/>
+    <path d="M388 130h54"/>
+    <path d="M588 130h54"/>
+    <path d="M788 130h54"/>
+  </g>
+  <g fill="#EA4B71">
+    <path d="M238 122l16 8-16 8z"/>
+    <path d="M438 122l16 8-16 8z"/>
+    <path d="M638 122l16 8-16 8z"/>
+    <path d="M838 122l16 8-16 8z"/>
+  </g>
+  <g font-family="Inter, Arial, sans-serif">
+    <g transform="translate(40 66)">
+      <rect width="148" height="128" rx="10" fill="#F2F4F7"/>
+      <circle cx="74" cy="42" r="18" fill="#12B76A"/>
+      <path d="M68 34l18 8-18 8z" fill="#fff"/>
+      <text x="74" y="84" font-size="16" font-weight="700" text-anchor="middle" fill="#101828">Manual Trigger</text>
+      <text x="74" y="108" font-size="12" text-anchor="middle" fill="#667085">click Test workflow</text>
+    </g>
+    <g transform="translate(240 66)">
+      <rect width="148" height="128" rx="10" fill="#F2F4F7"/>
+      <circle cx="74" cy="42" r="18" fill="#0BA5EC"/>
+      <path d="M64 33h20v6H64zm0 10h20v6H64zm0 10h14v6H64z" fill="#fff"/>
+      <text x="74" y="84" font-size="16" font-weight="700" text-anchor="middle" fill="#101828">RSS Read</text>
+      <text x="74" y="108" font-size="12" text-anchor="middle" fill="#667085">Google News feed</text>
+    </g>
+    <g transform="translate(440 66)">
+      <rect width="148" height="128" rx="10" fill="#F2F4F7"/>
+      <circle cx="74" cy="42" r="18" fill="#F79009"/>
+      <path d="M65 35h18v5H65zm0 9h13v5H65zm0 9h8v5H65z" fill="#fff"/>
+      <text x="74" y="84" font-size="16" font-weight="700" text-anchor="middle" fill="#101828">Sort</text>
+      <text x="74" y="108" font-size="12" text-anchor="middle" fill="#667085">newest first</text>
+    </g>
+    <g transform="translate(640 66)">
+      <rect width="148" height="128" rx="10" fill="#F2F4F7"/>
+      <circle cx="74" cy="42" r="18" fill="#7A5AF8"/>
+      <text x="74" y="48" font-size="20" font-weight="800" text-anchor="middle" fill="#fff">1</text>
+      <text x="74" y="84" font-size="16" font-weight="700" text-anchor="middle" fill="#101828">Limit</text>
+      <text x="74" y="108" font-size="12" text-anchor="middle" fill="#667085">top item only</text>
+    </g>
+    <g transform="translate(840 66)">
+      <rect width="160" height="128" rx="10" fill="#F2F4F7"/>
+      <circle cx="80" cy="42" r="18" fill="#EA4B71"/>
+      <path d="M71 35h18v4H71zm0 8h18v4H71zm0 8h12v4H71z" fill="#fff"/>
+      <text x="80" y="84" font-size="16" font-weight="700" text-anchor="middle" fill="#101828">Edit Fields</text>
+      <text x="80" y="108" font-size="12" text-anchor="middle" fill="#667085">title, link, date</text>
+    </g>
+  </g>
+</svg>
+

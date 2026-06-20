@@ -8,6 +8,9 @@ This repo contains a ready-to-import n8n workflow for a live launch-tracking dem
 
 ## One-click downloads
 
+- [Open the Intro to n8n onboarding page](https://gmossy.github.io/n8n-meetup/intro-to-n8n/)
+- [Open the Intro to n8n guide](intro-to-n8n/README.md)
+- [Download the beginner Daily Top AI Headline workflow](intro-to-n8n/daily_top_ai_headline_workflow.json)
 - [Download the n8n workflow JSON](https://raw.githubusercontent.com/gmossy/n8n-meetup/main/launch_tracker_workflow.json)
 - [Download this repo as a ZIP](https://github.com/gmossy/n8n-meetup/archive/refs/heads/main.zip)
 - [Open the GitHub Pages landing page](https://gmossy.github.io/n8n-meetup/)

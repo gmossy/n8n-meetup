@@ -1,0 +1,162 @@
+{
+  "name": "Daily Top AI Headline",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f7b2e60c-6c8f-4b01-bb9d-56a14cc9e3a1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=artificial+intelligence&hl=en-US&gl=US&ceid=US:en",
+        "options": {}
+      },
+      "id": "fdb3ad10-cd80-421f-aed2-347907c28d8a",
+      "name": "RSS Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -540,
+        0
+      ],
+      "notes": "Keyless RSS feed for AI news. If Google News RSS is flaky, replace the URL with a curated publisher feed."
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "isoDate",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2e855d4-7f63-4d0e-a99b-728c519b296c",
+      "name": "Sort Newest First",
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "notes": "Sort RSS items by isoDate descending so the newest headline is first."
+    },
+    {
+      "parameters": {
+        "maxItems": 1
+      },
+      "id": "a9bed498-d848-4f6f-b561-a4c47867d635",
+      "name": "Limit To Top Headline",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -100,
+        0
+      ],
+      "notes": "Keep only the newest item after sorting."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a214a227-4af8-4046-b04a-6d9c3c7c51a5",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "b5e660fb-5c10-4cb0-978a-48dc2a8655b0",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            },
+            {
+              "id": "c9df2fa5-a33c-4fcf-b4db-e77fe96c6088",
+              "name": "publicationDate",
+              "value": "={{ $json.isoDate || $json.pubDate }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": false
+      },
+      "id": "c8c7a0f7-102b-4afc-a78b-99fd6ac3ab8b",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        140,
+        0
+      ],
+      "notes": "Output a clean beginner-friendly object with only title, link, and publicationDate."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Sort Newest First",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort Newest First": {
+      "main": [
+        [
+          {
+            "node": "Limit To Top Headline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit To Top Headline": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a0d5120b-f5a7-4fe4-a24c-9e8d89a9cc7b",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "daily-top-ai-headline",
+  "tags": []
+}
+

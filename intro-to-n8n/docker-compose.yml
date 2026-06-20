@@ -1,0 +1,44 @@
+# Docker Compose file for a beginner-friendly local n8n instance.
+# Run from this folder with: docker compose up -d
+
+services:
+  # This service runs the n8n workflow editor and execution engine.
+  n8n:
+    # Pinned image tag for reproducibility. Avoid :latest in workshops.
+    image: docker.n8n.io/n8nio/n8n:2.26.8
+
+    # Friendly container name shown by docker ps and docker compose logs.
+    container_name: intro-to-n8n
+
+    # Restart if Docker or the machine restarts, unless you manually stop it.
+    restart: unless-stopped
+
+    # Map http://localhost:5678 on your computer to port 5678 in the container.
+    ports:
+      - "5678:5678"
+
+    environment:
+      # Set the timezone used by scheduled workflows and timestamps.
+      - GENERIC_TIMEZONE=America/New_York
+      - TZ=America/New_York
+
+      # Tell n8n what host it is running on for local demos.
+      - N8N_HOST=localhost
+
+      # Tell n8n which protocol to use for generated URLs.
+      - N8N_PROTOCOL=http
+
+      # Public-facing webhook base URL for this local instance.
+      - WEBHOOK_URL=http://localhost:5678/
+
+      # Keep this demo beginner-friendly. Do not use this setting for public servers.
+      - N8N_SECURE_COOKIE=false
+
+    volumes:
+      # Persist n8n data, workflows, owner account, and credentials across restarts.
+      - intro_n8n_data:/home/node/.n8n
+
+volumes:
+  # Named Docker volume. It survives docker compose down, but not docker compose down -v.
+  intro_n8n_data:
+
