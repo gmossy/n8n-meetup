@@ -1,0 +1,207 @@
+{
+  "name": "AI News Briefing Digest",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c1f842a6-3db6-4386-b869-6d88ef296f26",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=artificial+intelligence&hl=en-US&gl=US&ceid=US:en",
+        "options": {}
+      },
+      "id": "b89d8de2-97d5-43a4-bd94-a6e8cfeb2712",
+      "name": "RSS Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -760,
+        0
+      ],
+      "notes": "Keyless AI news RSS source. Swap this URL for a curated feed if Google News RSS is flaky."
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "isoDate",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d5e3eefc-3575-41f6-a138-aa0d747f05dc",
+      "name": "Sort Newest First",
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        -540,
+        0
+      ],
+      "notes": "Sort by RSS date descending so the newest stories are first."
+    },
+    {
+      "parameters": {
+        "maxItems": 5
+      },
+      "id": "a1857bcb-0b3f-47e8-af04-edf70bec0cfa",
+      "name": "Limit To Top 5",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "notes": "Send only five candidate headlines to the model to keep token use small."
+    },
+    {
+      "parameters": {
+        "jsCode": "const articles = $input.all().map((item, index) => {\n  const j = item.json;\n  return {\n    rank: index + 1,\n    title: j.title || '',\n    link: j.link || '',\n    publicationDate: j.isoDate || j.pubDate || '',\n    source: j.creator || j.author || '',\n    snippet: (j.contentSnippet || j.content || '').replace(/<[^>]+>/g, '').slice(0, 500)\n  };\n});\n\nconst prompt = [\n  'Review these recent artificial intelligence news RSS items.',\n  'Pick the single most important item for engineers and technical meetup attendees.',\n  'Return only valid JSON with this exact shape:',\n  '{',\n  '  \"topHeadline\": string,',\n  '  \"sourceLink\": string,',\n  '  \"publicationDate\": string,',\n  '  \"summary\": string,',\n  '  \"whyItMatters\": string,',\n  '  \"tags\": string[],',\n  '  \"relevanceScore\": number',\n  '}',\n  '',\n  'RSS items:',\n  JSON.stringify(articles, null, 2)\n].join('\\n');\n\nreturn [{ json: { articles, prompt, generatedAt: new Date().toISOString() } }];"
+      },
+      "id": "ecf5caeb-7763-4772-ab02-a3b0c13f2346",
+      "name": "Prepare AI Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        0
+      ],
+      "notes": "Combine the five RSS items into one compact prompt for OpenAI."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an AI news editor for software engineers. Rank headlines for technical relevance, summarize clearly, and return only valid JSON. No markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $json.prompt\n    }\n  ],\n  \"temperature\": 0.3,\n  \"response_format\": { \"type\": \"json_object\" }\n} }}",
+        "options": {}
+      },
+      "id": "da621fc8-584d-4483-8bf1-c459e5718957",
+      "name": "OpenAI Briefing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        0
+      ],
+      "notes": "Uses the same model as the launch board demo: gpt-4o-mini. The API key must be supplied as OPENAI_API_KEY in the n8n environment."
+    },
+    {
+      "parameters": {
+        "jsCode": "const ai = $json.choices?.[0]?.message?.content || '{}';\nconst prepared = $('Prepare AI Prompt').first().json;\nlet parsed;\ntry {\n  parsed = JSON.parse(ai);\n} catch (error) {\n  parsed = {\n    topHeadline: 'Unable to parse AI response',\n    sourceLink: '',\n    publicationDate: '',\n    summary: ai,\n    whyItMatters: 'The model response was not valid JSON. Tighten the prompt or inspect the OpenAI Briefing node output.',\n    tags: ['debugging'],\n    relevanceScore: 0\n  };\n}\n\nreturn [{ json: {\n  topHeadline: parsed.topHeadline || '',\n  sourceLink: parsed.sourceLink || '',\n  publicationDate: parsed.publicationDate || '',\n  summary: parsed.summary || '',\n  whyItMatters: parsed.whyItMatters || '',\n  tags: Array.isArray(parsed.tags) ? parsed.tags : [],\n  relevanceScore: Number(parsed.relevanceScore || 0),\n  candidateCount: Array.isArray(prepared.articles) ? prepared.articles.length : 0,\n  generatedAt: prepared.generatedAt\n} }];"
+      },
+      "id": "d20f3d7f-2de9-4a17-b843-08f51ed88103",
+      "name": "Parse AI Briefing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "notes": "Parse the model JSON into clean final workflow output."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Sort Newest First",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort Newest First": {
+      "main": [
+        [
+          {
+            "node": "Limit To Top 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit To Top 5": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Briefing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Briefing": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Briefing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "798c80e6-e8ef-4724-b354-fb82cf52fe7c",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "ai-news-briefing-digest",
+  "tags": []
+}
+

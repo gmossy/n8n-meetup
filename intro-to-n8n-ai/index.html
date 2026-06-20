@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intro to n8n AI - AI News Briefing Digest</title>
+  <style>
+    :root {
+      --ink: #101828;
+      --muted: #667085;
+      --line: #d0d5dd;
+      --soft: #f2f4f7;
+      --n8n: #ea4b71;
+      --blue: #155eef;
+      --green: #039855;
+      --code: #182230;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #f8fafc;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    header {
+      background: #101828;
+      color: #fff;
+      border-bottom: 5px solid var(--n8n);
+    }
+    .wrap {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      gap: 36px;
+      align-items: center;
+      padding: 54px 0 46px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+      color: #fecdd6;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 99px;
+      background: var(--n8n);
+      box-shadow: 0 0 0 5px rgba(234,75,113,.18);
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(38px, 6vw, 76px);
+      line-height: .98;
+      letter-spacing: 0;
+    }
+    .lede {
+      margin: 20px 0 0;
+      max-width: 720px;
+      color: #d0d5dd;
+      font-size: 19px;
+    }
+    .credits {
+      margin-top: 20px;
+      color: #98a2b3;
+      font-size: 14px;
+    }
+    .hero-card {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid #344054;
+      border-radius: 8px;
+      padding: 22px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.25);
+    }
+    .stat {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .stat:last-child { border-bottom: 0; }
+    .icon {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: var(--soft);
+      color: var(--n8n);
+      font-weight: 800;
+    }
+    .stat b { display: block; }
+    .stat span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    main { padding: 34px 0 58px; }
+    section {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 18px;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+    p { margin: 0 0 14px; }
+    a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .button.primary {
+      background: var(--n8n);
+      border-color: var(--n8n);
+      color: #fff;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    ol, ul { padding-left: 22px; margin: 0; }
+    li + li { margin-top: 8px; }
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: var(--soft);
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .94em;
+    }
+    pre {
+      margin: 12px 0 0;
+      padding: 14px;
+      overflow: auto;
+      border-radius: 8px;
+      background: var(--code);
+      color: #f9fafb;
+      font-size: 14px;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+    }
+    .diagram {
+      display: block;
+      width: 100%;
+      max-width: 1280px;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #101828;
+    }
+    .note {
+      border-left: 4px solid var(--green);
+      padding: 12px 14px;
+      background: #ecfdf3;
+      color: #054f31;
+      border-radius: 6px;
+      margin-top: 12px;
+    }
+    footer {
+      padding: 28px 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hero">
+      <div>
+        <div class="eyebrow"><span class="dot"></span> Advanced n8n RSS + OpenAI</div>
+        <h1>AI News Briefing Digest</h1>
+        <p class="lede">A slightly more advanced workflow that ranks five AI news RSS items with OpenAI and returns a structured technical briefing using <code>gpt-4o-mini</code>.</p>
+        <p class="credits">Developer: Glenn Mossy · Contributor: Martin</p>
+        <div class="actions">
+          <a class="button primary" href="./ai_news_briefing_workflow.json">Download workflow JSON</a>
+          <a class="button" href="./docker-compose.yml">Download Docker Compose</a>
+          <a class="button" href="./README.md">Open the full guide</a>
+        </div>
+      </div>
+      <aside class="hero-card" aria-label="Advanced demo goals">
+        <div class="stat"><div class="icon">AI</div><div><b>OpenAI added</b><span>Uses the same model as the launch board: gpt-4o-mini.</span></div></div>
+        <div class="stat"><div class="icon">5</div><div><b>Five headlines</b><span>The model ranks a small candidate set, keeping token use modest.</span></div></div>
+        <div class="stat"><div class="icon">{ }</div><div><b>Structured JSON</b><span>Teaches prompt-to-JSON and parsing model output.</span></div></div>
+      </aside>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>Workflow Shape</h2>
+      <img class="diagram" src="./workflow-diagram.svg" alt="Manual Trigger to RSS Read to Sort to Limit to Prepare AI Prompt to OpenAI Briefing to Parse AI Briefing">
+    </section>
+
+    <div class="grid">
+      <section>
+        <h2>Start n8n</h2>
+        <p>Copy the env template, add your OpenAI key, then start n8n:</p>
+        <pre><code>cp .env.example .env
+docker compose up -d</code></pre>
+        <p style="margin-top:14px">Open:</p>
+        <pre><code>http://localhost:5678</code></pre>
+      </section>
+
+      <section>
+        <h2>Import And Run</h2>
+        <ol>
+          <li>Open n8n.</li>
+          <li>Choose <b>Workflows</b> then <b>Import from File</b>.</li>
+          <li>Select <code>ai_news_briefing_workflow.json</code>.</li>
+          <li>Click <b>Test workflow</b>.</li>
+          <li>Open the final <b>Parse AI Briefing</b> node output.</li>
+        </ol>
+      </section>
+    </div>
+
+    <section>
+      <h2>Secret Handling</h2>
+      <p>The workflow JSON contains this expression, not a real key:</p>
+      <pre><code>Bearer {{ $env.OPENAI_API_KEY }}</code></pre>
+      <div class="note">Put the real value in <code>.env</code> or n8n credentials. Never put real API keys in exported workflows, GitHub, screenshots, or frontend code.</div>
+    </section>
+
+    <section>
+      <h2>What People Learn</h2>
+      <ul>
+        <li>How to pass secrets into n8n with environment variables.</li>
+        <li>How to combine multiple RSS items into one model prompt.</li>
+        <li>How to ask OpenAI for JSON with <code>response_format</code>.</li>
+        <li>How to parse model output into a clean workflow result.</li>
+        <li>How to keep token use controlled by limiting items before the LLM call.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <span>Part of the n8n meetup repo. This advanced package follows the beginner RSS workflow and introduces authenticated AI automation.</span>
+  </footer>
+</body>
+</html>
+
