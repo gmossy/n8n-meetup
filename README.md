@@ -198,6 +198,12 @@ http://localhost:5678
 ```text
 Workflows -> Import from File -> launch_tracker_workflow.json
 ```
+OR 
+
+```text
+Workflows -> Import from url -> https://raw.githubusercontent.com/gmossy/n8n-meetup/main/launch_tracker_workflow.json
+```
+
 
 7. Open the imported workflow and activate it.
 
